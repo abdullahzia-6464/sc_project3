@@ -7,5 +7,5 @@ SHIP_PORT = 8001
 SATELLITE_PORTS = [8002, 8003, 8004]
 
 # Simulation settings
-TIME_STEP = 5  # Time step in seconds
+TIME_STEP = 1  # Time step in seconds
 SIMULATION_DURATION = 60  # Total simulation time in seconds

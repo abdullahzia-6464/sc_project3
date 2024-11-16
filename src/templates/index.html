@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Satellite and Ship Visualization</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="map" style="width: 100%; height: 100vh;"></div>
+    <script>
+        const CENTER_LAT = 51.9;
+        const CENTER_LON = -8.5;
+        const RADIUS_KM = 200;
+
+        // Initialize map
+        const map = L.map('map').setView([CENTER_LAT, CENTER_LON], 8);
+
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        // Add the restricted region circle
+        // const restrictedCircle = L.circle([CENTER_LAT, CENTER_LON], {
+        //     color: 'blue',
+        //     fillColor: '#blue',
+        //     fillOpacity: 0.2,
+        //     radius: RADIUS_KM * 1000,
+        // }).addTo(map);
+
+        // Layers for dynamic markers
+        const satelliteMarkers = {};
+        let shipMarker = null;
+
+        // Function to update map
+        async function updateMap() {
+            const response = await fetch('/get-all-positions');
+            const data = await response.json();
+
+            // Update satellites
+            const satellites = data.satellites || [];
+            satellites.forEach(sat => {
+                const { latitude, longitude, port } = sat;
+                if (!satelliteMarkers[port]) {
+                    // Create a new marker if not already present
+                    satelliteMarkers[port] = L.circleMarker([latitude, longitude], {
+                        radius: 8,
+                        color: 'red',
+                        fill: true,
+                        fillOpacity: 0.8,
+                    }).addTo(map).bindPopup(`Satellite (Port ${port})`);
+                } else {
+                    // Update position
+                    satelliteMarkers[port].setLatLng([latitude, longitude]);
+                }
+            });
+
+            // Update ship
+            const ship = data.ship;
+            if (ship) {
+                if (!shipMarker) {
+                    // Create a new marker for the ship
+                    shipMarker = L.marker([ship.latitude, ship.longitude], {
+                        icon: L.icon({
+                            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+                            iconSize: [25, 41],
+                            iconAnchor: [12, 41],
+                        }),
+                    }).addTo(map).bindPopup('Ship');
+                } else {
+                    // Update ship position
+                    shipMarker.setLatLng([ship.latitude, ship.longitude]);
+                }
+            }
+        }
+
+        // Periodically update the map
+        setInterval(updateMap, 1000); // Update every 5 seconds
+        updateMap(); // Initial call
+    </script>
+</body>
+</html>
