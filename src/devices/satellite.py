@@ -1,4 +1,3 @@
-import os
 from flask import Flask, request, jsonify
 import math
 import time
@@ -7,8 +6,7 @@ import requests
 import sys
 import random
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(BASE_DIR)
+sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your path
 from config import SATELLITE_PORTS, GROUND_CONTROL_PORT, GROUND_CONTROL_COORDS, TIME_STEP, COMMUNICATION_RANGE_KM
 
 app = Flask(__name__)
