@@ -9,6 +9,8 @@ SATELLITE_PORTS = range(8002, 8011)
 GROUND_CONTROL_COORDS = [51.8985, -8.4756]
 COMMUNICATION_RANGE_KM = 150 
 
+SHIP_SPEED = 0.02
+
 # Simulation settings
 TIME_STEP = 1  # Time step in seconds
 SIMULATION_DURATION = 60  # Total simulation time in seconds
