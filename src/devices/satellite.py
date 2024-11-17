@@ -20,32 +20,33 @@ SATELLITE_SPEED = 2.5  # Movement speed multiplier
 class Satellite:
     def __init__(self, satellite_id, all_ports):
         self.id = satellite_id
-        self.center_lat = random.uniform(49.5, 52.0)
-        self.center_lon = random.uniform(-10.5, -8.5)
-        self.angle = random.uniform(0, 360)
-        self.latitude = None
-        self.longitude = None
+        # Random initial position within specified range
+        self.latitude = random.uniform(48.5, 52.5)
+        self.longitude = random.uniform(-11.5, -5.83)
         self.all_ports = all_ports
         self.neighbors = []
-        self.moving_outward = random.choice([True, False])
-        self.update_position()
-
-    def update_position(self):
-        angle_rad = math.radians(self.angle)
-        EARTH_RADIUS_KM = 6371
-        self.latitude = self.center_lat + (RADIUS_KM / EARTH_RADIUS_KM) * math.cos(angle_rad)
-        self.longitude = self.center_lon + (RADIUS_KM / (EARTH_RADIUS_KM * math.cos(math.radians(self.center_lat)))) * math.sin(angle_rad)
+        self.moving_up_right = random.choice([True, False])  # Random initial direction
+        self.step_size = 0.05  # Adjust this value for diagonal movement step size
 
     def move(self):
-        if self.moving_outward:
-            self.angle += SATELLITE_SPEED
+        # Adjust latitude and longitude based on direction
+        if self.moving_up_right:
+            new_lat = self.latitude + self.step_size
+            new_lon = self.longitude + self.step_size
         else:
-            self.angle -= SATELLITE_SPEED
+            new_lat = self.latitude - self.step_size
+            new_lon = self.longitude - self.step_size
 
-        if self.angle >= 360 or self.angle <= 0:
-            self.moving_outward = not self.moving_outward
+        # Check if the new position is within the specified boundaries
+        if 48.5 <= new_lat <= 52.5 and -11.5 <= new_lon <= -5.83:
+            # Update position if within bounds
+            self.latitude = new_lat
+            self.longitude = new_lon
+        else:
+            # Reverse direction if out of bounds
+            self.moving_up_right = not self.moving_up_right
+            print(f"Satellite {self.id} reversed direction to stay within boundaries.")
 
-        self.update_position()
         self.find_neighbors()
 
     def find_neighbors(self):
@@ -73,7 +74,8 @@ def haversine(lat1, lon1, lat2, lon2):
 @app.route("/", methods=["POST"])
 def receive_message():
     data = request.get_json()
-    destination = data.get("destination")
+    random_delay = random.uniform(0.1, 1.0)  # Simulate realistic delay
+    time.sleep(random_delay)
 
     # Calculate distance to ground control
     ground_control_distance = haversine(
@@ -81,7 +83,7 @@ def receive_message():
         GROUND_CONTROL_COORDS[0], GROUND_CONTROL_COORDS[1]
     )
 
-    if destination == "ground_control" and ground_control_distance <= COMMUNICATION_RANGE_KM:
+    if ground_control_distance <= COMMUNICATION_RANGE_KM:
         try:
             response = requests.post(f"http://127.0.0.1:{GROUND_CONTROL_PORT}/", json=data)
             return jsonify({"status": "Message forwarded to ground control", "response": response.json()})
@@ -105,12 +107,14 @@ def receive_message():
         except Exception:
             continue
 
-    if closest_neighbor:
+    while closest_neighbor:
         try:
             response = requests.post(f"http://127.0.0.1:{closest_neighbor}/", json=data)
-            return jsonify({"status": "Message forwarded to next satellite", "response": response.json()})
-        except Exception as e:
-            return jsonify({"status": "Error forwarding to next satellite", "error": str(e)}), 500
+            if response.status_code == 200:
+                return jsonify({"status": "Message forwarded", "response": response.json()}), 200
+        except Exception:
+            print(f"Retrying to send message to {closest_neighbor}")
+            time.sleep(random.uniform(0.5, 1.5))  # Retry delay
 
     return jsonify({"status": "Message could not be forwarded"}), 500
 

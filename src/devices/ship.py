@@ -4,28 +4,58 @@ import random
 import time
 import math
 import sys
+from shapely.geometry import Point, Polygon
 
 sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
-from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM
+from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED
 
 # Circular trajectory parameters for the ship
-CENTER_LAT, CENTER_LON = 50.89, -8.68  # Starting position for the ship
-SHIP_SPEED = 0.02  # Degrees per time step
+CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
 
 app = Flask(__name__)
 
 class Ship:
-    def __init__(self):
+    def __init__(self, port):
         self.latitude = CENTER_LAT
         self.longitude = CENTER_LON
         self.neighbors = []  # List of satellites within communication range
+        self.speed = SHIP_SPEED
+        # Define a bounding polygon for the Celtic Sea
+        self.celtic_sea_boundary = Polygon([
+            (51.0, -11.0),  # Bottom-left corner
+            (51.0, -7.5),   # Bottom-right corner
+            (49.5, -7.5),   # Top-right corner
+            (49.5, -11.0)   # Top-left corner
+        ])
+
+        self.port = port
+        self.ship_id = str(port)[-2:]
+        self.last_ack = None
+        self.last_sent_time = 0
 
     def move(self):
-        # The ship moves in a slow zigzag pattern across the Celtic Sea
-        self.latitude += SHIP_SPEED * 0.1  # Slight change in latitude
-        self.longitude += SHIP_SPEED  # Larger change in longitude
+        # Move the ship in a zigzag pattern
+        new_lat = self.latitude + self.speed * 0.1  # Slight change in latitude
+        new_lon = self.longitude + self.speed  # Larger change in longitude
+        
+        # Check if the new position is within the Celtic Sea boundary
+        if self.is_within_celtic_sea(new_lat, new_lon):
+            self.latitude = new_lat
+            self.longitude = new_lon
+        else:
+            # Reverse direction to stay within the boundary
+            self.speed *= -1  # Flip direction
+            print(f"Ship reversed direction to stay within the Celtic Sea boundary.")
+
         print(f"Ship moved to lat={self.latitude}, lon={self.longitude}")
         self.find_neighbors()
+
+    def is_within_celtic_sea(self, lat, lon):
+        """
+        Check if the given latitude and longitude are within the Celtic Sea boundary.
+        """
+        point = Point(lat, lon)
+        return self.celtic_sea_boundary.contains(point)
 
     def find_neighbors(self):
         self.neighbors = []
@@ -58,26 +88,35 @@ class Ship:
         return closest_port
 
     def send_data(self):
-        data = {
-            "source": "ship",
-            "destination": "ground_control",
-            "payload": {
-                "caught_fish": random.randint(0, 100),
-                "wind_levels": round(random.uniform(5.0, 20.0), 1),
-                "water_temperature": round(random.uniform(10.0, 15.0), 1),
-                "water_depth": round(random.uniform(50.0, 200.0), 1),
+        current_time = time.time()
+        if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
+            data = {
+                "source": "ship",
+                "ship_id": self.ship_id,
+                "destination": "ground_control",
+                "timestamp": current_time,
+                "payload": {
+                    "caught_fish": random.randint(0, 100),
+                    "wind_levels": round(random.uniform(5.0, 20.0), 1),
+                    "water_temperature": round(random.uniform(10.0, 15.0), 1),
+                    "water_depth": round(random.uniform(50.0, 200.0), 1),
+                }
             }
-        }
-        self.find_neighbors()
-        closest_satellite = self.find_closest_to_ground_control()
-        if closest_satellite:
-            try:
-                response = requests.post(f"http://127.0.0.1:{closest_satellite}/", json=data)
-                print(f"Ship sent data to Satellite {closest_satellite}. Response: {response.json()}")
-            except Exception as e:
-                print(f"Error sending data to Satellite {closest_satellite}: {e}")
-        else:
-            print("No satellite within range to send data.")
+            closest_satellite = self.find_closest_to_ground_control()
+            if closest_satellite:
+                try:
+                    response = requests.post(f"http://127.0.0.1:{closest_satellite}/", json=data)
+                    ack = response.json()
+                    if ack.get("status") == "Acknowledged":
+                        self.last_ack = ack
+                        print(f"Received acknowledgment: {ack}")
+                    else:
+                        print("Acknowledgment not received, retrying...")
+                except Exception as e:
+                    print(f"Error sending data to Satellite {closest_satellite}: {e}")
+            else:
+                print("No satellite within range to send data.")
+            self.last_sent_time = current_time
 
 # Utility function to calculate the distance between two points
 def haversine(lat1, lon1, lat2, lon2):
@@ -109,11 +148,14 @@ def ship_behavior():
         time.sleep(TIME_STEP)
 
 if __name__ == "__main__":
-    ship = Ship()
-    
-    # Start the ship's behavior in a separate thread
+    if len(sys.argv) != 2:
+        print("Usage: python ship.py <port>")
+        sys.exit(1)
+
+    port = int(sys.argv[1])
+    ship = Ship(port=port)
+
     from threading import Thread
     Thread(target=ship_behavior, daemon=True).start()
-    
-    # Run the Flask server
-    app.run(host="127.0.0.1", port=8001)  # Update port if needed
+    app.run(host="127.0.0.1", port=port)
+
