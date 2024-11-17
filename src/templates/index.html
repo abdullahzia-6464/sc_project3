@@ -11,7 +11,6 @@
     <script>
         const CENTER_LAT = 51.9;
         const CENTER_LON = -8.5;
-        const RADIUS_KM = 200;
 
         // Initialize map
         const map = L.map('map').setView([CENTER_LAT, CENTER_LON], 8);
@@ -21,22 +20,24 @@
             maxZoom: 19,
         }).addTo(map);
 
-        // Add the restricted region circle
-        // const restrictedCircle = L.circle([CENTER_LAT, CENTER_LON], {
-        //     color: 'blue',
-        //     fillColor: '#blue',
-        //     fillOpacity: 0.2,
-        //     radius: RADIUS_KM * 1000,
-        // }).addTo(map);
-
         // Layers for dynamic markers
         const satelliteMarkers = {};
         let shipMarker = null;
+        let groundControlMarker = null;
+        const edgesLayer = L.layerGroup().addTo(map);
 
         // Function to update map
         async function updateMap() {
             const response = await fetch('/get-all-positions');
             const data = await response.json();
+
+            // Update ground control
+            if (!groundControlMarker) {
+                const { latitude, longitude } = data.ground_control;
+                groundControlMarker = L.marker([latitude, longitude], { color: 'green' })
+                    .addTo(map)
+                    .bindPopup('Ground Control');
+            }
 
             // Update satellites
             const satellites = data.satellites || [];
@@ -49,7 +50,7 @@
                         color: 'red',
                         fill: true,
                         fillOpacity: 0.8,
-                    }).addTo(map).bindPopup(`Satellite (Port ${port})`);
+                    }).addTo(map).bindPopup(`Satellite (Port: ${port})`);
                 } else {
                     // Update position
                     satelliteMarkers[port].setLatLng([latitude, longitude]);
@@ -73,10 +74,18 @@
                     shipMarker.setLatLng([ship.latitude, ship.longitude]);
                 }
             }
+
+            // Draw edges
+            edgesLayer.clearLayers();
+            (data.edges || []).forEach(edge => {
+                const source = [edge.source.latitude, edge.source.longitude];
+                const target = [edge.target.latitude, edge.target.longitude];
+                L.polyline([source, target], { color: 'blue' }).addTo(edgesLayer);
+            });
         }
 
         // Periodically update the map
-        setInterval(updateMap, 1000); // Update every 5 seconds
+        setInterval(updateMap, 1000);
         updateMap(); // Initial call
     </script>
 </body>

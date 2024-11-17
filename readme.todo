@@ -1,0 +1,6 @@
+- Ship movement fix -> Goes out of celtic sea and onto land, set an area and redefine movement. Initial position should be further south.
+- Message actually sending properly:
+    - Decrease the frequency of messages being sent
+    - New values should relate to previous values
+    - Visualisation to show message being sent as well.
+- 

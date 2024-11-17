@@ -1,12 +1,12 @@
 from flask import Flask, jsonify, send_from_directory
 import requests
+import math
+import sys
 
-# Constants
-CENTER_LAT = 51.9  # Approximate latitude of Cork, Ireland
-CENTER_LON = -8.5  # Approximate longitude of Cork, Ireland
-RADIUS_KM = 200  # Restricted radius in kilometers
 SHIP_PORT = 8001
-SATELLITE_PORTS = range(8002, 8011)  # Ports 8002 to 8010 for satellites
+
+sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+from config import COMMUNICATION_RANGE_KM, GROUND_CONTROL_COORDS, SATELLITE_PORTS, GROUND_CONTROL_COORDS
 
 # Flask app for visualization
 app = Flask(__name__)
@@ -19,14 +19,25 @@ def fetch_position(port):
             data = response.json()
             return data["latitude"], data["longitude"]
     except requests.ConnectionError:
-        return None  # Server not running on this port
-    return None  # Invalid response
+        return None
+    return None
+
+# Calculate the distance between two coordinates using the haversine formula
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371  # Radius of the Earth in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 @app.route('/get-all-positions', methods=['GET'])
 def get_all_positions():
     positions = {
         "satellites": [],
-        "ship": None
+        "ship": None,
+        "edges": [],
+        "ground_control": {"latitude": GROUND_CONTROL_COORDS[0], "longitude": GROUND_CONTROL_COORDS[1]},
     }
 
     # Fetch satellite positions
@@ -40,54 +51,23 @@ def get_all_positions():
     if ship_position:
         positions["ship"] = {"latitude": ship_position[0], "longitude": ship_position[1]}
 
+    # Compute edges between neighbors
+    all_positions = [{"latitude": positions["ground_control"]["latitude"], "longitude": positions["ground_control"]["longitude"], "type": "ground_control"}]
+    all_positions += [{"latitude": sat["latitude"], "longitude": sat["longitude"], "type": "satellite", "port": sat["port"]} for sat in positions["satellites"]]
+    if positions["ship"]:
+        all_positions.append({"latitude": positions["ship"]["latitude"], "longitude": positions["ship"]["longitude"], "type": "ship"})
+
+    for i, source in enumerate(all_positions):
+        for target in all_positions[i + 1:]:
+            distance = haversine(source["latitude"], source["longitude"], target["latitude"], target["longitude"])
+            if distance <= COMMUNICATION_RANGE_KM:
+                positions["edges"].append({"source": source, "target": target})
+
     return jsonify(positions)
 
 @app.route('/')
 def visualize():
-    print("Visualise route accessed.")
     return send_from_directory('templates', 'index.html')
-
-# # Function to create a folium map
-# @app.route('/')
-# def visualize():
-#     # Create the map centered on the Celtic Sea area
-#     folium_map = folium.Map(location=[CENTER_LAT, CENTER_LON], zoom_start=8)
-
-#     # Add a circle to visualize the restricted region (Celtic Sea)
-#     folium.Circle(
-#         location=[CENTER_LAT, CENTER_LON],
-#         radius=RADIUS_KM * 1000,  # Convert km to meters for Folium
-#         color="blue",
-#         fill=True,
-#         fill_opacity=0.2,
-#         tooltip="Celtic Sea Restricted Region"
-#     ).add_to(folium_map)
-
-#     # Fetch and display satellite positions
-#     for port in SATELLITE_PORTS:
-#         position = fetch_position(port)
-#         if position:
-#             lat, lon = position
-#             folium.CircleMarker(
-#                 location=[lat, lon],
-#                 radius=8,  # Red circle size
-#                 color="red",
-#                 fill=True,
-#                 fill_opacity=0.8,
-#                 popup=f"Satellite (Port {port})"
-#             ).add_to(folium_map)
-
-#     # Fetch and display ship position
-#     ship_position = fetch_position(SHIP_PORT)
-#     if ship_position:
-#         lat, lon = ship_position
-#         folium.Marker(
-#             location=[lat, lon],
-#             popup="Ship",
-#             icon=folium.Icon(color="blue", icon="ship")
-#         ).add_to(folium_map)
-
-#     return folium_map._repr_html_()
 
 if __name__ == '__main__':
     app.run(debug=True, port=8069)
