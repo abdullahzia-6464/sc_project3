@@ -3,4 +3,8 @@
     - Decrease the frequency of messages being sent
     - New values should relate to previous values
     - Visualisation to show message being sent as well.
-- 
+    - Redefine communication range (increase)
+    - Ground control should be peer as well - send responses to the ship (maybe ship only sends next message once previous is ack-ed?)
+- "Realistic" Aspects:
+    - Random delays 
+    - Unexpected failures (x% of time) 
