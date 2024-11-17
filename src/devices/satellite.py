@@ -86,6 +86,8 @@ def receive_message():
     if ground_control_distance <= COMMUNICATION_RANGE_KM:
         try:
             response = requests.post(f"http://127.0.0.1:{GROUND_CONTROL_PORT}/", json=data)
+            if response.status_code == 200:
+                log_communication([satellite.latitude, satellite.longitude], GROUND_CONTROL_COORDS)
             return jsonify({"status": "Message forwarded to ground control", "response": response.json()})
         except Exception as e:
             return jsonify({"status": "Error forwarding to ground control", "error": str(e)}), 500
@@ -111,6 +113,9 @@ def receive_message():
         try:
             response = requests.post(f"http://127.0.0.1:{closest_neighbor}/", json=data)
             if response.status_code == 200:
+                target_coords = requests.get(f"http://127.0.0.1:{closest_neighbor}/get-position").json()
+                target = [target_coords["latitude"], target_coords["longitude"]]
+                log_communication([satellite.latitude, satellite.longitude], target)
                 return jsonify({"status": "Message forwarded", "response": response.json()}), 200
         except Exception:
             print(f"Retrying to send message to {closest_neighbor}")
@@ -131,6 +136,17 @@ def position_updater():
         print(f"Satellite {satellite.id} moved to lat={satellite.latitude}, lon={satellite.longitude}")
         print(f"Neighbors: {satellite.neighbors}")
         time.sleep(TIME_STEP)
+
+def log_communication(source, target):
+    url = "http://127.0.0.1:8069/log-communication"
+    data = {
+        "source": {"latitude": source[0], "longitude": source[1]},
+        "target": {"latitude": target[0], "longitude": target[1]},
+    }
+    try:
+        requests.post(url, json=data)
+    except requests.ConnectionError:
+        print("Failed to log communication")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
