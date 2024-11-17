@@ -74,7 +74,8 @@ def haversine(lat1, lon1, lat2, lon2):
 @app.route("/", methods=["POST"])
 def receive_message():
     data = request.get_json()
-    destination = data.get("destination")
+    random_delay = random.uniform(0.1, 1.0)  # Simulate realistic delay
+    time.sleep(random_delay)
 
     # Calculate distance to ground control
     ground_control_distance = haversine(
@@ -82,7 +83,7 @@ def receive_message():
         GROUND_CONTROL_COORDS[0], GROUND_CONTROL_COORDS[1]
     )
 
-    if destination == "ground_control" and ground_control_distance <= COMMUNICATION_RANGE_KM:
+    if ground_control_distance <= COMMUNICATION_RANGE_KM:
         try:
             response = requests.post(f"http://127.0.0.1:{GROUND_CONTROL_PORT}/", json=data)
             return jsonify({"status": "Message forwarded to ground control", "response": response.json()})
@@ -106,12 +107,14 @@ def receive_message():
         except Exception:
             continue
 
-    if closest_neighbor:
+    while closest_neighbor:
         try:
             response = requests.post(f"http://127.0.0.1:{closest_neighbor}/", json=data)
-            return jsonify({"status": "Message forwarded to next satellite", "response": response.json()})
-        except Exception as e:
-            return jsonify({"status": "Error forwarding to next satellite", "error": str(e)}), 500
+            if response.status_code == 200:
+                return jsonify({"status": "Message forwarded", "response": response.json()}), 200
+        except Exception:
+            print(f"Retrying to send message to {closest_neighbor}")
+            time.sleep(random.uniform(0.5, 1.5))  # Retry delay
 
     return jsonify({"status": "Message could not be forwarded"}), 500
 
