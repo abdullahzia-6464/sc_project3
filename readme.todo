@@ -9,5 +9,6 @@
 - "Realistic" Aspects:
     - Random delays (done but maybe increase time to exaggerate?)
     - Unexpected failures (x% of time) - new stop satellites script - stop a satellite based on port number on command
+    - Corrupted messages? How to find out? Checksum?
 - Get it to work on two Pis
 - Hardcoded IPs and ports in a lot of files - fix them
