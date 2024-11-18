@@ -1,6 +1,8 @@
 #!/bin/bash
 
-# File containing PIDs of satellites
+# Script to stop all running satellite servers.
+
+# File containing PIDs and ports of satellites
 PID_FILE="satellite_pids.txt"
 
 if [ ! -f "$PID_FILE" ]; then
@@ -9,8 +11,8 @@ if [ ! -f "$PID_FILE" ]; then
 fi
 
 # Kill each process
-while IFS= read -r pid; do
-    echo "Stopping process $pid"
+while IFS=' ' read -r pid port; do
+    echo "Stopping satellite on port $port (PID $pid)..."
     kill "$pid" 2>/dev/null
 done < "$PID_FILE"
 
