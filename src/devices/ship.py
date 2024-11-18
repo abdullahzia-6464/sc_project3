@@ -2,7 +2,6 @@ from flask import Flask, jsonify
 import requests
 import random
 import time
-import math
 import sys
 #from shapely.geometry import Point, Polygon
 import os
@@ -43,7 +42,6 @@ class Ship:
         self.ship_id = str(port)[-2:]
         self.last_ack = None
         self.last_sent_time = 0
-        self.last_sent_data = None
 
     def move(self):
         # Move the ship in a zigzag pattern
@@ -123,9 +121,6 @@ class Ship:
                 data["payload"]["caught_fish"] = "CORRUPTED"
                 print("Payload corrupted for demonstration")
 
-            # Store the last transmitted data
-            self.last_sent_data = data
-
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
                 try:
@@ -140,9 +135,6 @@ class Ship:
                     # if ack.get("status") == "Acknowledged":
                     #     self.last_ack = ack
                     #     print(f"Received acknowledgment: {ack}")
-                    if ack.get("response").get("status") == "Checksum Error" and ack.get("response").get("action") == "Resend":
-                        print("Resending data due to checksum error...")
-                        self.resend_data(closest_satellite)
                     # else:
                     #     print("Acknowledgment not received, retrying...")
                 except Exception as e:
@@ -151,18 +143,6 @@ class Ship:
                 print("No satellite within range to send data.")
             self.last_sent_time = current_time
 
-    def resend_data(self, satellite_port):
-        if self.last_sent_data:
-            try:
-                response = requests.post(f"http://127.0.0.1:{satellite_port}/", json=self.last_sent_data)
-                ack = response.json()
-                if ack.get("status") == "Acknowledged":
-                    self.last_ack = ack
-                    print(f"Resent data acknowledged: {ack}")
-                else:
-                    print("Resent data acknowledgment failed.")
-            except Exception as e:
-                print(f"Error resending data to Satellite {satellite_port}: {e}")
 
 def log_communication(source, target):
     url = f"http://{EARTH_DEVICE_IP}:33069/log-communication"
