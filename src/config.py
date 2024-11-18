@@ -6,6 +6,10 @@ SATELLITE_IP = '10.35.70.34'
 
 EARTH_DEVICE_IP = '10.35.70.13'
 
+# SATELLITE_IP = '127.0.0.1'
+
+# EARTH_DEVICE_IP = '127.0.0.1'
+
 # Port assignments for devices (on localhost for testing)
 GROUND_CONTROL_PORT = 33000
 SHIP_PORT = range(33001, 33006)
