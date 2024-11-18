@@ -24,6 +24,7 @@
         const satelliteMarkers = {};
         let shipMarker = null;
         let groundControlMarker = null;
+        const communicationsLayer = L.layerGroup().addTo(map);
         const edgesLayer = L.layerGroup().addTo(map);
 
         // Function to update map
@@ -80,7 +81,19 @@
             (data.edges || []).forEach(edge => {
                 const source = [edge.source.latitude, edge.source.longitude];
                 const target = [edge.target.latitude, edge.target.longitude];
-                L.polyline([source, target], { color: 'blue' }).addTo(edgesLayer);
+                L.polyline([source, target], { color: 'blue', opacity: 0.2, weight: 3 }).addTo(edgesLayer);
+            });
+
+            // Draw active communications
+            communicationsLayer.clearLayers();
+            (data.communications || []).forEach(comm => {
+                const source = [comm.source.latitude, comm.source.longitude];
+                const target = [comm.target.latitude, comm.target.longitude];
+                L.polyline([source, target], {
+                    color: 'green',
+                    dashArray: '5, 10',  // Dashed line
+                    weight: 6,
+                }).addTo(communicationsLayer);
             });
         }
 

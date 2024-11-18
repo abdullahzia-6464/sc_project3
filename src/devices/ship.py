@@ -45,9 +45,9 @@ class Ship:
         else:
             # Reverse direction to stay within the boundary
             self.speed *= -1  # Flip direction
-            print(f"Ship reversed direction to stay within the Celtic Sea boundary.")
+            #print(f"Ship reversed direction to stay within the Celtic Sea boundary.")
 
-        print(f"Ship moved to lat={self.latitude}, lon={self.longitude}")
+        #print(f"Ship moved to lat={self.latitude}, lon={self.longitude}")
         self.find_neighbors()
 
     def is_within_celtic_sea(self, lat, lon):
@@ -68,7 +68,7 @@ class Ship:
                     self.neighbors.append((port, distance))
             except Exception:
                 continue
-        print(f"Neighbors within range: {self.neighbors}")
+        #print(f"Neighbors within range: {self.neighbors}")
 
     def find_closest_to_ground_control(self):
         ground_lat, ground_lon = GROUND_CONTROL_COORDS
@@ -89,7 +89,8 @@ class Ship:
 
     def send_data(self):
         current_time = time.time()
-        if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
+        # if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
+        if current_time - self.last_sent_time > TIME_STEP * 5:
             data = {
                 "source": "ship",
                 "ship_id": self.ship_id,
@@ -106,17 +107,35 @@ class Ship:
             if closest_satellite:
                 try:
                     response = requests.post(f"http://127.0.0.1:{closest_satellite}/", json=data)
+                    
+                    # call log_communication to visualise the comm
+                    target_coords = requests.get(f"http://127.0.0.1:{closest_satellite}/get-position").json()
+                    target = [target_coords["latitude"], target_coords["longitude"]]
+                    print("LOGGING COMMS")
+                    log_communication([ship.latitude, ship.longitude],target)
+                    
                     ack = response.json()
-                    if ack.get("status") == "Acknowledged":
-                        self.last_ack = ack
-                        print(f"Received acknowledgment: {ack}")
-                    else:
-                        print("Acknowledgment not received, retrying...")
+                    # if ack.get("status") == "Acknowledged":
+                    #     self.last_ack = ack
+                    #     print(f"Received acknowledgment: {ack}")
+                    # else:
+                    #     print("Acknowledgment not received, retrying...")
                 except Exception as e:
                     print(f"Error sending data to Satellite {closest_satellite}: {e}")
             else:
                 print("No satellite within range to send data.")
             self.last_sent_time = current_time
+
+def log_communication(source, target):
+    url = "http://127.0.0.1:8069/log-communication"
+    data = {
+        "source": {"latitude": source[0], "longitude": source[1]},
+        "target": {"latitude": target[0], "longitude": target[1]},
+    }
+    try:
+        requests.post(url, json=data)
+    except requests.ConnectionError:
+        print("Failed to log communication")
 
 # Utility function to calculate the distance between two points
 def haversine(lat1, lon1, lat2, lon2):

@@ -1,12 +1,18 @@
-from flask import Flask, jsonify, send_from_directory
-import requests
+from flask import Flask, jsonify, send_from_directory, request
 import math
 import sys
+import time
+import requests
 
 SHIP_PORT = 8001
 
 sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
 from config import COMMUNICATION_RANGE_KM, GROUND_CONTROL_COORDS, SATELLITE_PORTS, GROUND_CONTROL_COORDS
+
+# Shared data to track active communications
+active_communications = []
+
+COMMUNICATION_DISPLAY_TIME = 1  # Time in seconds to display a communication line
 
 # Flask app for visualization
 app = Flask(__name__)
@@ -33,10 +39,19 @@ def haversine(lat1, lon1, lat2, lon2):
 
 @app.route('/get-all-positions', methods=['GET'])
 def get_all_positions():
+    # Remove expired communication events
+    global active_communications
+    current_time = time.time()
+    active_communications = [
+        comm for comm in active_communications
+        if current_time - comm["timestamp"] <= COMMUNICATION_DISPLAY_TIME
+    ]
+
     positions = {
         "satellites": [],
         "ship": None,
         "edges": [],
+        "communications": active_communications,  # Add active communications
         "ground_control": {"latitude": GROUND_CONTROL_COORDS[0], "longitude": GROUND_CONTROL_COORDS[1]},
     }
 
@@ -64,6 +79,17 @@ def get_all_positions():
                 positions["edges"].append({"source": source, "target": target})
 
     return jsonify(positions)
+
+
+@app.route('/log-communication', methods=['POST'])
+def log_communication():
+    data = request.get_json()
+    source = data.get("source")
+    target = data.get("target")
+    timestamp = time.time()
+    active_communications.append({"source": source, "target": target, "timestamp": timestamp})
+    return jsonify({"status": "logged"}), 200
+
 
 @app.route('/')
 def visualize():
