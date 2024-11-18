@@ -28,7 +28,6 @@ def fetch_position(ip, port):
             data = response.json()
             return data["latitude"], data["longitude"]
     except requests.ConnectionError:
-        print("Connection error.")
         return None
     return None
 
@@ -44,7 +43,6 @@ def haversine(lat1, lon1, lat2, lon2):
 @app.route('/get-all-positions', methods=['GET'])
 def get_all_positions():
     # Remove expired communication events
-    print("GET ALL POSITIONS")
     global active_communications
     current_time = time.time()
     active_communications = [
