@@ -6,16 +6,24 @@ import math
 import sys
 #from shapely.geometry import Point, Polygon
 import os
+import hashlib
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
-#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+#sys.path.append("/Users/korayyesilova/Desktop/sc_project3/src")  # Update to your project path
 from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP, EARTH_DEVICE_IP
 
 # Circular trajectory parameters for the ship
 CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
 
 app = Flask(__name__)
+
+def calculate_checksum(data):
+    """
+    Calculates MD5 checksum of the given data.
+    """
+    data_str = str(data).encode('utf-8')
+    return hashlib.md5(data_str).hexdigest()
 
 class Ship:
     def __init__(self, port):
@@ -35,12 +43,13 @@ class Ship:
         self.ship_id = str(port)[-2:]
         self.last_ack = None
         self.last_sent_time = 0
+        self.last_sent_data = None
 
     def move(self):
         # Move the ship in a zigzag pattern
         new_lat = self.latitude + self.speed * 0.1  # Slight change in latitude
         new_lon = self.longitude + self.speed  # Larger change in longitude
-        
+
         # Check if the new position is within the Celtic Sea boundary
         if self.is_within_celtic_sea(new_lat, new_lon):
             self.latitude = new_lat
@@ -77,7 +86,7 @@ class Ship:
         ground_lat, ground_lon = GROUND_CONTROL_COORDS
         closest_port = None
         closest_distance = float("inf")
-        
+
         for port, _ in self.neighbors:
             try:
                 response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position", proxies={"http": None, "https": None})
@@ -106,21 +115,34 @@ class Ship:
                     "water_depth": round(random.uniform(50.0, 200.0), 1),
                 }
             }
+            # Calculate checksum
+            data["checksum"] = calculate_checksum(data["payload"])
+
+            # Introduce random corruption
+            if random.random() < 0.05:  # 5% probability
+                data["payload"]["caught_fish"] = "CORRUPTED"
+                print("Payload corrupted for demonstration")
+
+            # Store the last transmitted data
+            self.last_sent_data = data
+
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
                 try:
                     response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None})
-                    
                     # call log_communication to visualise the comm
                     target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
                     print("LOGGING COMMS")
                     log_communication([ship.latitude, ship.longitude],target)
-                    
+
                     ack = response.json()
                     # if ack.get("status") == "Acknowledged":
                     #     self.last_ack = ack
                     #     print(f"Received acknowledgment: {ack}")
+                    if ack.get("response").get("status") == "Checksum Error" and ack.get("response").get("action") == "Resend":
+                        print("Resending data due to checksum error...")
+                        self.resend_data(closest_satellite)
                     # else:
                     #     print("Acknowledgment not received, retrying...")
                 except Exception as e:
@@ -128,6 +150,19 @@ class Ship:
             else:
                 print("No satellite within range to send data.")
             self.last_sent_time = current_time
+
+    def resend_data(self, satellite_port):
+        if self.last_sent_data:
+            try:
+                response = requests.post(f"http://127.0.0.1:{satellite_port}/", json=self.last_sent_data)
+                ack = response.json()
+                if ack.get("status") == "Acknowledged":
+                    self.last_ack = ack
+                    print(f"Resent data acknowledged: {ack}")
+                else:
+                    print("Resent data acknowledgment failed.")
+            except Exception as e:
+                print(f"Error resending data to Satellite {satellite_port}: {e}")
 
 def log_communication(source, target):
     url = f"http://{EARTH_DEVICE_IP}:33069/log-communication"

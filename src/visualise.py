@@ -9,7 +9,7 @@ SHIP_PORT = 33001
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
-#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+#sys.path.append("/Users/korayyesilova/Desktop/sc_project3/src")  # Update to your project path
 from config import COMMUNICATION_RANGE_KM, GROUND_CONTROL_COORDS, SATELLITE_PORTS, GROUND_CONTROL_COORDS, EARTH_DEVICE_IP, SATELLITE_IP
 
 # Shared data to track active communications
