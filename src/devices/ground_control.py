@@ -3,8 +3,10 @@ import csv
 from pathlib import Path
 import time
 from datetime import datetime
-
 from src.devices.ship import calculate_checksum
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
 
 app = Flask(__name__)
 
@@ -21,9 +23,37 @@ if not file_path.exists():
         writer = csv.writer(file)
         writer.writerow(["ship_id", "timestamp_sent", "fish_count", "wind_level", "water_temp", "water_depth", "delay"])
 
+
+def verify_signature(data, signature):
+    """
+    Verify the signature of the data using the public key.
+    """
+    try:
+        public_key.verify(
+            bytes.fromhex(signature),  # Convert hex string back to bytes
+            data.encode(),
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        return True
+    except Exception as e:
+        print(f"*** Signature verification failed. *** {e}")
+        return False
+
 @app.route("/", methods=["POST"])
 def receive_data():
     data = request.get_json()
+
+    payload_str = str(data["payload"])
+    # Verify the signature
+    if "signature" in data and verify_signature(payload_str, data["signature"]):
+        print("*** Signature verified. ***")
+    else:
+        return jsonify({"status": "Signature Error"}), 400
+
     if "payload" in data and "checksum" in data:
         received_checksum = data["checksum"]
         calculated_checksum = calculate_checksum(data["payload"])
@@ -57,4 +87,8 @@ def receive_data():
 
 
 if __name__ == "__main__":
+    # Load the public key for verification
+    with open("../../public_key.pem", "rb") as key_file:
+        public_key = serialization.load_pem_public_key(key_file.read())
+
     app.run(host="127.0.0.1", port=8000)  # Ground control listens on port 8000

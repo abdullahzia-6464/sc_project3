@@ -5,6 +5,9 @@ import time
 import sys
 from shapely.geometry import Point, Polygon
 import hashlib
+from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives import serialization
 
 sys.path.append("/Users/korayyesilova/Desktop/sc_project3/src")  # Update to your project path
 from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED
@@ -13,6 +16,27 @@ from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICAT
 CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
 
 app = Flask(__name__)
+
+
+# Load the private key for signing
+with open("../../private_key.pem", "rb") as key_file:
+    private_key = serialization.load_pem_private_key(
+        key_file.read(),
+        password=None
+    )
+
+def sign_data(data):
+    """
+    Sign the data using the private key and return the signature.
+    """
+    return private_key.sign(
+        data.encode(),
+        padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH
+        ),
+        hashes.SHA256()
+    )
 
 def calculate_checksum(data):
     """
@@ -110,13 +134,23 @@ class Ship:
                     "water_depth": round(random.uniform(50.0, 200.0), 1),
                 }
             }
+
+            # Convert payload to string and sign
+            payload_str = str(data["payload"])
+            data["signature"] = sign_data(payload_str).hex()  # Signature as hex string
+
             # Calculate checksum
             data["checksum"] = calculate_checksum(data["payload"])
+
+            # Corrupt the payload after signing (simulating tampering)
+            if random.random() < 0.05:  # 5% probability
+                data["payload"]["wind_levels"] += 1  # Modify the payload slightly
+                print("*** Tampered payload for demonstration. ***")
 
             # Introduce random corruption
             if random.random() < 0.05:  # 5% probability
                 data["payload"]["caught_fish"] = "CORRUPTED"
-                print("Payload corrupted for demonstration")
+                print("*** Payload corrupted for demonstration. ***")
 
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
