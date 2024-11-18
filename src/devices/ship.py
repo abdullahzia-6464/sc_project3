@@ -117,7 +117,7 @@ class Ship:
             data["checksum"] = calculate_checksum(data["payload"])
 
             # Introduce random corruption
-            if random.random() < 0.05:  # 5% probability
+            if random.random() < 0.2:  # 20% probability
                 data["payload"]["caught_fish"] = "CORRUPTED"
                 print("Payload corrupted for demonstration")
 
