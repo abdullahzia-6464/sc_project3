@@ -3,11 +3,14 @@ import math
 import sys
 import time
 import requests
+import os
 
-SHIP_PORT = 8001
+SHIP_PORT = 33001
 
-sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
-from config import COMMUNICATION_RANGE_KM, GROUND_CONTROL_COORDS, SATELLITE_PORTS, GROUND_CONTROL_COORDS
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+from config import COMMUNICATION_RANGE_KM, GROUND_CONTROL_COORDS, SATELLITE_PORTS, GROUND_CONTROL_COORDS, EARTH_DEVICE_IP, SATELLITE_IP
 
 # Shared data to track active communications
 active_communications = []
@@ -18,9 +21,9 @@ COMMUNICATION_DISPLAY_TIME = 1  # Time in seconds to display a communication lin
 app = Flask(__name__)
 
 # Function to fetch position from a given server
-def fetch_position(port):
+def fetch_position(ip, port):
     try:
-        response = requests.get(f"http://127.0.0.1:{port}/get-position")
+        response = requests.get(f"http://{ip}:{port}/get-position", proxies={"http": None, "https": None}, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return data["latitude"], data["longitude"]
@@ -57,12 +60,12 @@ def get_all_positions():
 
     # Fetch satellite positions
     for port in SATELLITE_PORTS:
-        position = fetch_position(port)
+        position = fetch_position(SATELLITE_IP, port)
         if position:
             positions["satellites"].append({"latitude": position[0], "longitude": position[1], "port": port})
 
     # Fetch ship position
-    ship_position = fetch_position(SHIP_PORT)
+    ship_position = fetch_position(EARTH_DEVICE_IP, SHIP_PORT)
     if ship_position:
         positions["ship"] = {"latitude": ship_position[0], "longitude": ship_position[1]}
 
@@ -96,4 +99,4 @@ def visualize():
     return send_from_directory('templates', 'index.html')
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8069)
+    app.run(debug=True, host='0.0.0.0', port=33069)

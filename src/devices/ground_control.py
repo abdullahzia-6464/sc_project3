@@ -3,6 +3,13 @@ import csv
 from pathlib import Path
 import time
 from datetime import datetime
+import sys
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+from config import GROUND_CONTROL_PORT
 
 app = Flask(__name__)
 
@@ -47,4 +54,4 @@ def receive_data():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8000)  # Ground control listens on port 8000
+    app.run(host="0.0.0.0", port=GROUND_CONTROL_PORT)  # Ground control listens on port 8000
