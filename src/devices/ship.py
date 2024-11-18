@@ -4,7 +4,7 @@ import random
 import time
 import math
 import sys
-from shapely.geometry import Point, Polygon
+#from shapely.geometry import Point, Polygon
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,12 +24,12 @@ class Ship:
         self.neighbors = []  # List of satellites within communication range
         self.speed = SHIP_SPEED
         # Define a bounding polygon for the Celtic Sea
-        self.celtic_sea_boundary = Polygon([
-            (51.0, -11.0),  # Bottom-left corner
-            (51.0, -7.5),   # Bottom-right corner
-            (49.5, -7.5),   # Top-right corner
-            (49.5, -11.0)   # Top-left corner
-        ])
+        # self.celtic_sea_boundary = Polygon([
+        #     (51.0, -11.0),  # Bottom-left corner
+        #     (51.0, -7.5),   # Bottom-right corner
+        #     (49.5, -7.5),   # Top-right corner
+        #     (49.5, -11.0)   # Top-left corner
+        # ])
 
         self.port = port
         self.ship_id = str(port)[-2:]
@@ -57,8 +57,8 @@ class Ship:
         """
         Check if the given latitude and longitude are within the Celtic Sea boundary.
         """
-        point = Point(lat, lon)
-        return self.celtic_sea_boundary.contains(point)
+        return 49.5 <= lat <= 51.0 and -11.0 <= lon <= -7.5
+
 
     def find_neighbors(self):
         self.neighbors = []
