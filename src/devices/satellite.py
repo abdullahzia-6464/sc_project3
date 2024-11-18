@@ -27,7 +27,6 @@ class Satellite:
         self.neighbors = []
         self.moving_up_right = random.choice([True, False])  # Random initial direction
         self.step_size = 0.05  # Adjust this value for diagonal movement step size
-
     def move(self):
         # Adjust latitude and longitude based on direction
         if self.moving_up_right:
@@ -73,6 +72,15 @@ def haversine(lat1, lon1, lat2, lon2):
 
 @app.route("/", methods=["POST"])
 def receive_message():
+    headers = request.headers
+    if headers['X-Group-ID'] == '8':
+        ip = headers['X-Destination-IP']
+        port = headers['X-Destination-Port']
+        data = request.data
+        print(f"Forwarding message to {ip}:{port}")
+        response = requests.post(f"http://{ip}:{port}/", data=data, verify=False,headers=headers,proxies={"http": None, "https": None})
+        return response.text, response.status_code
+
     data = request.get_json()
     random_delay = random.uniform(0.1, 1.0)  # Simulate realistic delay
     time.sleep(random_delay)
@@ -83,9 +91,15 @@ def receive_message():
         GROUND_CONTROL_COORDS[0], GROUND_CONTROL_COORDS[1]
     )
 
+    headers = {
+        "X-Group-ID": "10",
+        "X-Destination-IP" : "127.0.0.1",
+        "X-Destination-Port" : GROUND_CONTROL_PORT
+    }
+
     if ground_control_distance <= COMMUNICATION_RANGE_KM:
         try:
-            response = requests.post(f"http://127.0.0.1:{GROUND_CONTROL_PORT}/", json=data)
+            response = requests.post(f"http://127.0.0.1:{GROUND_CONTROL_PORT}/", json=data,headers=headers)
             if response.status_code == 200:
                 log_communication([satellite.latitude, satellite.longitude], GROUND_CONTROL_COORDS)
             return jsonify({"status": "Message forwarded to ground control", "response": response.json()})
@@ -111,7 +125,7 @@ def receive_message():
 
     while closest_neighbor:
         try:
-            response = requests.post(f"http://127.0.0.1:{closest_neighbor}/", json=data)
+            response = requests.post(f"http://127.0.0.1:{closest_neighbor}/", json=data,headers=headers)
             if response.status_code == 200:
                 target_coords = requests.get(f"http://127.0.0.1:{closest_neighbor}/get-position").json()
                 target = [target_coords["latitude"], target_coords["longitude"]]

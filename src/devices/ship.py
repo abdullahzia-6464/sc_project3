@@ -7,7 +7,7 @@ import sys
 from shapely.geometry import Point, Polygon
 
 sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
-from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED
+from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, GROUND_CONTROL_PORT
 
 # Circular trajectory parameters for the ship
 CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
@@ -37,7 +37,7 @@ class Ship:
         # Move the ship in a zigzag pattern
         new_lat = self.latitude + self.speed * 0.1  # Slight change in latitude
         new_lon = self.longitude + self.speed  # Larger change in longitude
-        
+
         # Check if the new position is within the Celtic Sea boundary
         if self.is_within_celtic_sea(new_lat, new_lon):
             self.latitude = new_lat
@@ -74,7 +74,7 @@ class Ship:
         ground_lat, ground_lon = GROUND_CONTROL_COORDS
         closest_port = None
         closest_distance = float("inf")
-        
+
         for port, _ in self.neighbors:
             try:
                 response = requests.get(f"http://127.0.0.1:{port}/get-position")
@@ -90,6 +90,11 @@ class Ship:
     def send_data(self):
         current_time = time.time()
         # if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
+        headers = {
+            "X-Group-ID": "10",
+            "X-Destination-IP" : "127.0.0.1",
+            "X-Destination-Port" : GROUND_CONTROL_PORT
+        }
         if current_time - self.last_sent_time > TIME_STEP * 5:
             data = {
                 "source": "ship",
@@ -106,14 +111,14 @@ class Ship:
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
                 try:
-                    response = requests.post(f"http://127.0.0.1:{closest_satellite}/", json=data)
-                    
+                    response = requests.post(f"http://127.0.0.1:{closest_satellite}/", json=data,headers=headers)
+
                     # call log_communication to visualise the comm
                     target_coords = requests.get(f"http://127.0.0.1:{closest_satellite}/get-position").json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
                     print("LOGGING COMMS")
                     log_communication([ship.latitude, ship.longitude],target)
-                    
+
                     ack = response.json()
                     # if ack.get("status") == "Acknowledged":
                     #     self.last_ack = ack
