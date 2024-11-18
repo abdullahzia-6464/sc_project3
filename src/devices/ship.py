@@ -125,7 +125,7 @@ class Ship:
             data["checksum"] = calculate_checksum(payload_str)
 
             # Introduce random corruption
-            if random.random() < 0.5:  # 5% probability
+            if random.random() < 0.2:  # 20% probability
                 decrypted_payload = json.loads(cipher_suite.decrypt(data["payload"].encode()).decode())
                 decrypted_payload["caught_fish"] = "CORRUPTED"
                 print("Payload corrupted for demonstration")

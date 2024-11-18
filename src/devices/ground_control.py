@@ -13,7 +13,7 @@ sys.path.append(BASE_DIR)
 #sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
 from config import GROUND_CONTROL_PORT
 
-from src.devices.ship import calculate_checksum
+from devices.ship import calculate_checksum
 
 app = Flask(__name__)
 

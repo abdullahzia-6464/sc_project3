@@ -2,7 +2,7 @@
 
 # Script to instantiate 8 satellite servers starting from port 8002
 
-START_PORT=8002
+START_PORT=33002
 NUM_SATELLITES=5
 SATELLITE_SCRIPT="src/devices/satellite.py"
 
