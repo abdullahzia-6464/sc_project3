@@ -31,7 +31,7 @@ def receive_data():
         # Verify checksum
         if received_checksum != calculated_checksum:
             print(f"Checksum mismatch for data from Ship {data['ship_id']}")
-            return jsonify({"status": "Checksum Error", "action": "Resend"}), 400
+            return jsonify({"status": "Checksum Error"}), 400
 
         payload = data["payload"]
         print(f"Received data from Ship {data['ship_id']}: {payload}")
