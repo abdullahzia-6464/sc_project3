@@ -4,10 +4,13 @@ import random
 import time
 import math
 import sys
-from shapely.geometry import Point, Polygon
+#from shapely.geometry import Point, Polygon
+import os
 
-sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
-from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, GROUND_CONTROL_PORT
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP, EARTH_DEVICE_IP
 
 # Circular trajectory parameters for the ship
 CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
@@ -21,12 +24,12 @@ class Ship:
         self.neighbors = []  # List of satellites within communication range
         self.speed = SHIP_SPEED
         # Define a bounding polygon for the Celtic Sea
-        self.celtic_sea_boundary = Polygon([
-            (51.0, -11.0),  # Bottom-left corner
-            (51.0, -7.5),   # Bottom-right corner
-            (49.5, -7.5),   # Top-right corner
-            (49.5, -11.0)   # Top-left corner
-        ])
+        # self.celtic_sea_boundary = Polygon([
+        #     (51.0, -11.0),  # Bottom-left corner
+        #     (51.0, -7.5),   # Bottom-right corner
+        #     (49.5, -7.5),   # Top-right corner
+        #     (49.5, -11.0)   # Top-left corner
+        # ])
 
         self.port = port
         self.ship_id = str(port)[-2:]
@@ -54,14 +57,14 @@ class Ship:
         """
         Check if the given latitude and longitude are within the Celtic Sea boundary.
         """
-        point = Point(lat, lon)
-        return self.celtic_sea_boundary.contains(point)
+        return 49.5 <= lat <= 51.0 and -11.0 <= lon <= -7.5
+
 
     def find_neighbors(self):
         self.neighbors = []
         for port in SATELLITE_PORTS:
             try:
-                response = requests.get(f"http://127.0.0.1:{port}/get-position")
+                response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position", proxies={"http": None, "https": None})
                 position = response.json()
                 distance = haversine(self.latitude, self.longitude, position["latitude"], position["longitude"])
                 if distance <= COMMUNICATION_RANGE_KM:
@@ -77,7 +80,7 @@ class Ship:
 
         for port, _ in self.neighbors:
             try:
-                response = requests.get(f"http://127.0.0.1:{port}/get-position")
+                response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position", proxies={"http": None, "https": None})
                 position = response.json()
                 distance_to_ground = haversine(position["latitude"], position["longitude"], ground_lat, ground_lon)
                 if distance_to_ground < closest_distance:
@@ -111,10 +114,10 @@ class Ship:
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
                 try:
-                    response = requests.post(f"http://127.0.0.1:{closest_satellite}/", json=data,headers=headers)
+                    response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None})
 
                     # call log_communication to visualise the comm
-                    target_coords = requests.get(f"http://127.0.0.1:{closest_satellite}/get-position").json()
+                    target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
                     print("LOGGING COMMS")
                     log_communication([ship.latitude, ship.longitude],target)
@@ -132,15 +135,15 @@ class Ship:
             self.last_sent_time = current_time
 
 def log_communication(source, target):
-    url = "http://127.0.0.1:8069/log-communication"
+    url = f"http://{EARTH_DEVICE_IP}:33069/log-communication"
     data = {
         "source": {"latitude": source[0], "longitude": source[1]},
         "target": {"latitude": target[0], "longitude": target[1]},
     }
     try:
-        requests.post(url, json=data)
+        requests.post(url, json=data, proxies={"http": None, "https": None})
     except requests.ConnectionError:
-        print("Failed to log communication")
+        print()
 
 # Utility function to calculate the distance between two points
 def haversine(lat1, lon1, lat2, lon2):
@@ -181,5 +184,5 @@ if __name__ == "__main__":
 
     from threading import Thread
     Thread(target=ship_behavior, daemon=True).start()
-    app.run(host="127.0.0.1", port=port)
+    app.run(host="0.0.0.0", port=port)
 
