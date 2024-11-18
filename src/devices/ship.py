@@ -5,8 +5,11 @@ import time
 import math
 import sys
 from shapely.geometry import Point, Polygon
+import os
 
-sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
 from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP
 
 # Circular trajectory parameters for the ship
@@ -61,7 +64,7 @@ class Ship:
         self.neighbors = []
         for port in SATELLITE_PORTS:
             try:
-                response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position")
+                response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position", proxies={"http": None, "https": None})
                 position = response.json()
                 distance = haversine(self.latitude, self.longitude, position["latitude"], position["longitude"])
                 if distance <= COMMUNICATION_RANGE_KM:
@@ -77,7 +80,7 @@ class Ship:
         
         for port, _ in self.neighbors:
             try:
-                response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position")
+                response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position", proxies={"http": None, "https": None})
                 position = response.json()
                 distance_to_ground = haversine(position["latitude"], position["longitude"], ground_lat, ground_lon)
                 if distance_to_ground < closest_distance:
@@ -106,10 +109,10 @@ class Ship:
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
                 try:
-                    response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data)
+                    response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None})
                     
                     # call log_communication to visualise the comm
-                    target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position").json()
+                    target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
                     print("LOGGING COMMS")
                     #log_communication([ship.latitude, ship.longitude],target)
@@ -133,7 +136,7 @@ def log_communication(source, target):
         "target": {"latitude": target[0], "longitude": target[1]},
     }
     try:
-        requests.post(url, json=data)
+        requests.post(url, json=data, proxies={"http": None, "https": None})
     except requests.ConnectionError:
         print("Failed to log communication")
 

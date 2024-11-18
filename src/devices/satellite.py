@@ -5,8 +5,11 @@ from threading import Thread
 import requests
 import sys
 import random
+import os
 
-sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your path
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your path
 from config import SATELLITE_PORTS, GROUND_CONTROL_PORT, GROUND_CONTROL_COORDS, TIME_STEP, COMMUNICATION_RANGE_KM, EARTH_DEVICE_IP, SATELLITE_IP
 
 app = Flask(__name__)
@@ -54,7 +57,7 @@ class Satellite:
         for port in self.all_ports:
             if port != self.id:
                 try:
-                    response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position")
+                    response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position", proxies={"http": None, "https": None})
                     position = response.json()
                     distance = haversine(self.latitude, self.longitude, position["latitude"], position["longitude"])
                     if distance <= COMMUNICATION_RANGE_KM:
@@ -85,7 +88,7 @@ def receive_message():
 
     if ground_control_distance <= COMMUNICATION_RANGE_KM:
         try:
-            response = requests.post(f"http://{EARTH_DEVICE_IP}:{GROUND_CONTROL_PORT}/", json=data)
+            response = requests.post(f"http://{EARTH_DEVICE_IP}:{GROUND_CONTROL_PORT}/", json=data, proxies={"http": None, "https": None})
             if response.status_code == 200:
                 log_communication([satellite.latitude, satellite.longitude], GROUND_CONTROL_COORDS)
             return jsonify({"status": "Message forwarded to ground control", "response": response.json()})
@@ -97,7 +100,7 @@ def receive_message():
     closest_distance = float("inf")
     for neighbor in satellite.neighbors:
         try:
-            response = requests.get(f"http://{SATELLITE_IP}:{neighbor}/get-position")
+            response = requests.get(f"http://{SATELLITE_IP}:{neighbor}/get-position", proxies={"http": None, "https": None})
             position = response.json()
             neighbor_distance = haversine(
                 position["latitude"], position["longitude"],
@@ -111,9 +114,9 @@ def receive_message():
 
     while closest_neighbor:
         try:
-            response = requests.post(f"http://{SATELLITE_IP}:{closest_neighbor}/", json=data)
+            response = requests.post(f"http://{SATELLITE_IP}:{closest_neighbor}/", json=data, proxies={"http": None, "https": None})
             if response.status_code == 200:
-                target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_neighbor}/get-position").json()
+                target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_neighbor}/get-position", proxies={"http": None, "https": None}).json()
                 target = [target_coords["latitude"], target_coords["longitude"]]
                 #log_communication([satellite.latitude, satellite.longitude], target)
                 return jsonify({"status": "Message forwarded", "response": response.json()}), 200
