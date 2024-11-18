@@ -10,7 +10,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 #sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
-from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP
+from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP, EARTH_DEVICE_IP
 
 # Circular trajectory parameters for the ship
 CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
@@ -115,7 +115,7 @@ class Ship:
                     target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
                     print("LOGGING COMMS")
-                    #log_communication([ship.latitude, ship.longitude],target)
+                    log_communication([ship.latitude, ship.longitude],target)
                     
                     ack = response.json()
                     # if ack.get("status") == "Acknowledged":
@@ -130,7 +130,7 @@ class Ship:
             self.last_sent_time = current_time
 
 def log_communication(source, target):
-    url = "http://127.0.0.1:8069/log-communication"
+    url = f"http://{EARTH_DEVICE_IP}:{33069}/log-communication"
     data = {
         "source": {"latitude": source[0], "longitude": source[1]},
         "target": {"latitude": target[0], "longitude": target[1]},
@@ -138,7 +138,7 @@ def log_communication(source, target):
     try:
         requests.post(url, json=data, proxies={"http": None, "https": None})
     except requests.ConnectionError:
-        print("Failed to log communication")
+        print()
 
 # Utility function to calculate the distance between two points
 def haversine(lat1, lon1, lat2, lon2):

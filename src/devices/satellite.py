@@ -118,7 +118,7 @@ def receive_message():
             if response.status_code == 200:
                 target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_neighbor}/get-position", proxies={"http": None, "https": None}).json()
                 target = [target_coords["latitude"], target_coords["longitude"]]
-                #log_communication([satellite.latitude, satellite.longitude], target)
+                log_communication([satellite.latitude, satellite.longitude], target)
                 return jsonify({"status": "Message forwarded", "response": response.json()}), 200
         except Exception:
             print(f"Retrying to send message to {closest_neighbor}")
@@ -141,15 +141,16 @@ def position_updater():
         time.sleep(TIME_STEP)
 
 def log_communication(source, target):
-    url = "http://127.0.0.1:8069/log-communication"
+    url = f"http://{EARTH_DEVICE_IP}:{33069}/log-communication"
     data = {
         "source": {"latitude": source[0], "longitude": source[1]},
         "target": {"latitude": target[0], "longitude": target[1]},
     }
     try:
-        requests.post(url, json=data)
+        requests.post(url, json=data, proxies={"http": None, "https": None})
     except requests.ConnectionError:
-        print("Failed to log communication")
+        print()
+        #print("Failed to log communication")
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
