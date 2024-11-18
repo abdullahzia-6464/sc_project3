@@ -96,7 +96,7 @@ def receive_message():
 
     headers = {
         "X-Group-ID": "10",
-        "X-Destination-IP" : "127.0.0.1",
+        "X-Destination-IP" : EARTH_DEVICE_IP,
         "X-Destination-Port" : GROUND_CONTROL_PORT
     }
 
