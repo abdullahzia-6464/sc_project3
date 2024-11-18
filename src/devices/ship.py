@@ -40,7 +40,7 @@ class Ship:
         # Move the ship in a zigzag pattern
         new_lat = self.latitude + self.speed * 0.1  # Slight change in latitude
         new_lon = self.longitude + self.speed  # Larger change in longitude
-        
+
         # Check if the new position is within the Celtic Sea boundary
         if self.is_within_celtic_sea(new_lat, new_lon):
             self.latitude = new_lat
@@ -77,7 +77,7 @@ class Ship:
         ground_lat, ground_lon = GROUND_CONTROL_COORDS
         closest_port = None
         closest_distance = float("inf")
-        
+
         for port, _ in self.neighbors:
             try:
                 response = requests.get(f"http://{SATELLITE_IP}:{port}/get-position", proxies={"http": None, "https": None})
@@ -93,6 +93,11 @@ class Ship:
     def send_data(self):
         current_time = time.time()
         # if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
+        headers = {
+            "X-Group-ID": "10",
+            "X-Destination-IP" : "127.0.0.1",
+            "X-Destination-Port" : GROUND_CONTROL_PORT
+        }
         if current_time - self.last_sent_time > TIME_STEP * 5:
             data = {
                 "source": "ship",
@@ -110,13 +115,13 @@ class Ship:
             if closest_satellite:
                 try:
                     response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None})
-                    
+
                     # call log_communication to visualise the comm
                     target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
                     print("LOGGING COMMS")
                     log_communication([ship.latitude, ship.longitude],target)
-                    
+
                     ack = response.json()
                     # if ack.get("status") == "Acknowledged":
                     #     self.last_ack = ack
