@@ -1,10 +1,15 @@
 # Configuration for the simulation
 INITIAL_POSITIONS_FILE = "data/initial_positions.csv"
 
+#10.35.70.PI
+SATELLITE_IP = '10.35.70.34'
+
+EARTH_DEVICE_IP = '10.35.70.13'
+
 # Port assignments for devices (on localhost for testing)
-GROUND_CONTROL_PORT = 8000
-SHIP_PORT = 8001
-SATELLITE_PORTS = range(8002, 8011)
+GROUND_CONTROL_PORT = 33000
+SHIP_PORT = range(33001, 33006)
+SATELLITE_PORTS = range(33001, 33011)
 
 GROUND_CONTROL_COORDS = [51.8985, -8.4756]
 COMMUNICATION_RANGE_KM = 180 
