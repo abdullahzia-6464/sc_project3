@@ -130,7 +130,7 @@ class Ship:
             self.last_sent_time = current_time
 
 def log_communication(source, target):
-    url = f"http://{EARTH_DEVICE_IP}:{33069}/log-communication"
+    url = f"http://{EARTH_DEVICE_IP}:33069/log-communication"
     data = {
         "source": {"latitude": source[0], "longitude": source[1]},
         "target": {"latitude": target[0], "longitude": target[1]},
