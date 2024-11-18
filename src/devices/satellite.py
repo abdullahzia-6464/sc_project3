@@ -6,7 +6,7 @@ import requests
 import sys
 import random
 
-sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your path
+sys.path.append("/Users/korayyesilova/Desktop/sc_project3/src")  # Update to your path
 from config import SATELLITE_PORTS, GROUND_CONTROL_PORT, GROUND_CONTROL_COORDS, TIME_STEP, COMMUNICATION_RANGE_KM
 
 app = Flask(__name__)

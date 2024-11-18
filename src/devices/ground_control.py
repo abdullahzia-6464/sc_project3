@@ -4,6 +4,8 @@ from pathlib import Path
 import time
 from datetime import datetime
 
+from src.devices.ship import calculate_checksum
+
 app = Flask(__name__)
 
 # CSV file for storing received data
@@ -22,7 +24,15 @@ if not file_path.exists():
 @app.route("/", methods=["POST"])
 def receive_data():
     data = request.get_json()
-    if "payload" in data:
+    if "payload" in data and "checksum" in data:
+        received_checksum = data["checksum"]
+        calculated_checksum = calculate_checksum(data["payload"])
+
+        # Verify checksum
+        if received_checksum != calculated_checksum:
+            print(f"Checksum mismatch for data from Ship {data['ship_id']}")
+            return jsonify({"status": "Checksum Error", "action": "Resend"}), 400
+
         payload = data["payload"]
         print(f"Received data from Ship {data['ship_id']}: {payload}")
         timestamp = data.get("timestamp")

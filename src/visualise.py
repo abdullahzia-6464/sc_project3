@@ -6,7 +6,7 @@ import requests
 
 SHIP_PORT = 8001
 
-sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+sys.path.append("/Users/korayyesilova/Desktop/sc_project3/src")  # Update to your project path
 from config import COMMUNICATION_RANGE_KM, GROUND_CONTROL_COORDS, SATELLITE_PORTS, GROUND_CONTROL_COORDS
 
 # Shared data to track active communications
