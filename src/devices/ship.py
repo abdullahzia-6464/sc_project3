@@ -2,20 +2,28 @@ from flask import Flask, jsonify
 import requests
 import random
 import time
-import math
 import sys
 #from shapely.geometry import Point, Polygon
 import os
+import hashlib
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
-#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
+
 from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP, EARTH_DEVICE_IP, GROUND_CONTROL_PORT, GROUP8_IP
+
 
 # Circular trajectory parameters for the ship
 CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
 
 app = Flask(__name__)
+
+def calculate_checksum(data):
+    """
+    Calculates MD5 checksum of the given data.
+    """
+    data_str = str(data).encode('utf-8')
+    return hashlib.md5(data_str).hexdigest()
 
 class Ship:
     def __init__(self, port):
@@ -111,12 +119,22 @@ class Ship:
                     "water_depth": round(random.uniform(50.0, 200.0), 1),
                 }
             }
+            
+            # Calculate checksum
+            data["checksum"] = calculate_checksum(data["payload"])
+
+            # Introduce random corruption
+            if random.random() < 0.2:  # 20% probability
+                data["payload"]["caught_fish"] = "CORRUPTED"
+                print("Payload corrupted for demonstration")
+            
             if interoperable:
                 try:
                     response = requests.post(f"http://{GROUP8_IP}:{33001}/", json=data, proxies={"http": None, "https": None}, headers=headers)
                 except Exception as e:
                     print(f"Error sending data to group 8's satellite :(")
                 return
+
 
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
@@ -140,6 +158,7 @@ class Ship:
             else:
                 print("No satellite within range to send data.")
             self.last_sent_time = current_time
+
 
 def log_communication(source, target):
     url = f"http://{EARTH_DEVICE_IP}:33069/log-communication"

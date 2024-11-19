@@ -9,7 +9,7 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
-#sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your path
+#sys.path.append("/Users/korayyesilova/Desktop/sc_project3/src")  # Update to your path
 from config import SATELLITE_PORTS, GROUND_CONTROL_PORT, GROUND_CONTROL_COORDS, TIME_STEP, COMMUNICATION_RANGE_KM, EARTH_DEVICE_IP, SATELLITE_IP
 
 app = Flask(__name__)
@@ -47,7 +47,7 @@ class Satellite:
         else:
             # Reverse direction if out of bounds
             self.moving_up_right = not self.moving_up_right
-            print(f"Satellite {self.id} reversed direction to stay within boundaries.")
+            #print(f"Satellite {self.id} reversed direction to stay within boundaries.")
 
         self.find_neighbors()
 
@@ -152,7 +152,7 @@ def position_updater():
     while True:
         satellite.move()
         #print(f"Satellite {satellite.id} moved to lat={satellite.latitude}, lon={satellite.longitude}")
-        print(f"Neighbors: {satellite.neighbors}")
+        #print(f"Neighbors: {satellite.neighbors}")
         time.sleep(TIME_STEP)
 
 def log_communication(source, target):
@@ -164,7 +164,7 @@ def log_communication(source, target):
     try:
         requests.post(url, json=data, proxies={"http": None, "https": None})
     except requests.ConnectionError:
-        print()
+        pass
         #print("Failed to log communication")
 
 if __name__ == "__main__":

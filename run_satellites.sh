@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Script to instantiate 8 satellite servers starting from port 8002
+# Script to instantiate multiple satellite servers, storing PIDs and ports.
 
 START_PORT=33002
 NUM_SATELLITES=5
 SATELLITE_SCRIPT="src/devices/satellite.py"
 
-# File to store PIDs of running satellites
+# File to store PIDs and ports of running satellites
 PID_FILE="satellite_pids.txt"
 
 # Remove the PID file if it exists
@@ -25,7 +25,8 @@ for ((i = 0; i < NUM_SATELLITES; i++)); do
     PORT=$((START_PORT + i))
     echo "Starting satellite on port $PORT..."
     python3 $SATELLITE_SCRIPT $PORT &
-    echo $! >> "$PID_FILE"  # Save the process ID
+    PID=$!
+    echo "$PID $PORT" >> "$PID_FILE"  # Save PID and port to the file
 done
 
 echo "All satellites launched successfully!"
