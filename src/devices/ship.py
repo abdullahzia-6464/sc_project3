@@ -1,3 +1,5 @@
+from cryptography.fernet import Fernet
+import json
 from flask import Flask, jsonify
 import requests
 import random
@@ -119,15 +121,22 @@ class Ship:
                     "water_depth": round(random.uniform(50.0, 200.0), 1),
                 }
             }
-            
+
+            # Serialize and encrypt the payload
+            payload_str = json.dumps(data["payload"])
+            encrypted_payload = cipher_suite.encrypt(payload_str.encode())
+            data["payload"] = encrypted_payload.decode()
+
             # Calculate checksum
-            data["checksum"] = calculate_checksum(data["payload"])
+            data["checksum"] = calculate_checksum(payload_str)
 
             # Introduce random corruption
             if random.random() < 0.2:  # 20% probability
-                data["payload"]["caught_fish"] = "CORRUPTED"
+                decrypted_payload = json.loads(cipher_suite.decrypt(data["payload"].encode()).decode())
+                decrypted_payload["caught_fish"] = "CORRUPTED"
                 print("Payload corrupted for demonstration")
-            
+                data["payload"] = cipher_suite.encrypt(json.dumps(decrypted_payload).encode()).decode()
+
             if interoperable:
                 try:
                     response = requests.post(f"http://{GROUP8_IP}:{33001}/", json=data, proxies={"http": None, "https": None}, headers=headers)
@@ -213,6 +222,12 @@ if __name__ == "__main__":
 
     port = int(sys.argv[1])
     ship = Ship(port=port)
+
+    # Load the symmetric key
+    with open("symmetric.key", "rb") as key_file:
+        key = key_file.read()
+    cipher_suite = Fernet(key)
+
     from threading import Thread
     Thread(target=ship_behavior, daemon=True).start()
     app.run(host="0.0.0.0", port=port)
