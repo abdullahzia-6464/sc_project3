@@ -10,7 +10,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 #sys.path.append("/home/zia/Documents/sc_project3/src")  # Update to your project path
-from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP, EARTH_DEVICE_IP
+from config import SATELLITE_PORTS, TIME_STEP, GROUND_CONTROL_COORDS, COMMUNICATION_RANGE_KM, SHIP_SPEED, SATELLITE_IP, EARTH_DEVICE_IP, GROUND_CONTROL_PORT, GROUP8_IP
 
 # Circular trajectory parameters for the ship
 CENTER_LAT, CENTER_LON = 49.6, -8.68  # Starting position for the ship
@@ -95,7 +95,7 @@ class Ship:
         # if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
         headers = {
             "X-Group-ID": "10",
-            "X-Destination-IP" : "127.0.0.1",
+            "X-Destination-IP" : EARTH_DEVICE_IP,
             "X-Destination-Port" : GROUND_CONTROL_PORT
         }
         if current_time - self.last_sent_time > TIME_STEP * 5:
@@ -111,10 +111,17 @@ class Ship:
                     "water_depth": round(random.uniform(50.0, 200.0), 1),
                 }
             }
+            if interoperable:
+                try:
+                    response = requests.post(f"http://{GROUP8_IP}:{33001}/", json=data, proxies={"http": None, "https": None}, headers=headers)
+                except Exception as e:
+                    print(f"Error sending data to group 8's satellite :(")
+                return
+
             closest_satellite = self.find_closest_to_ground_control()
             if closest_satellite:
                 try:
-                    response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None})
+                    response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None}, headers=headers)
 
                     # call log_communication to visualise the comm
                     target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
@@ -175,13 +182,18 @@ def ship_behavior():
         time.sleep(TIME_STEP)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         print("Usage: python ship.py <port>")
         sys.exit(1)
 
+    global interoperable
+    if len(sys.argv) == 3:
+        interoperable = True
+    else:
+        interoperable = False
+
     port = int(sys.argv[1])
     ship = Ship(port=port)
-
     from threading import Thread
     Thread(target=ship_behavior, daemon=True).start()
     app.run(host="0.0.0.0", port=port)
