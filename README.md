@@ -20,25 +20,25 @@ source .venv/bin/activate
 
 ### 1. Install necessary packages using:
 ```bash
-	pip3 install -r requirements.txt 
+pip3 install -r requirements.txt 
 ```
 
 ### 2. Run ground control:
 ```bash
-	./run_ground_control.sh
+./run_ground_control.sh
 ```
 ### 3. Run satellites:
 ```bash
-	./run_satellites.sh
+./run_satellites.sh
 ```
 ### 4. Run ship:
 ```bash
-	./run_ship.sh
+./run_ship.sh
 ```
 ### 5. Run visualise.py to see all nodes and package transmission (if running on pis, port forwarding needs to be configured):
 - Runs on port `33069`
 ```bash
-	python3 src/visualise.py
+python3 src/visualise.py
 ```
 - Access the visualisation at  http://127.0.0.1:33069 by default.
 - If running on one of the Pis, feel free to run on either Pi.
@@ -49,9 +49,9 @@ source .venv/bin/activate
 
 - Identify the satellite's port you want to kill by clicking on the visual. Run the below script to kill it and you will see its any links with other devices disappear and no messages being routed through it.
 ```bash
-	./stop_port.sh <port>
+./stop_port.sh <port>
 ```
 ### 7. To stop all satellites and free up ports (Ctrl+C won't work for satellites):
 ```bash
-	./stop_satellites.sh
+./stop_satellites.sh
 ```
