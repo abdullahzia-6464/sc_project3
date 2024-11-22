@@ -135,7 +135,9 @@ class Ship:
             if random.random() < 0.2:  # 20% probability
                 decrypted_payload = json.loads(cipher_suite.decrypt(data["payload"].encode()).decode())
                 decrypted_payload["caught_fish"] = "CORRUPTED"
-                print("Payload corrupted for demonstration")
+                print("*************")
+                print("Payload corrupted for demonstration. Ground control will discard this message after checking checksum.")
+                print("*************")
                 data["payload"] = cipher_suite.encrypt(json.dumps(decrypted_payload).encode()).decode()
 
             if interoperable:
@@ -150,11 +152,11 @@ class Ship:
             if closest_satellite:
                 try:
                     response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None}, headers=headers)
-
+                    print(f"Message sent to satellite {SATELLITE_IP}:{closest_satellite}")
                     # call log_communication to visualise the comm
                     target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
-                    print("LOGGING COMMS")
+                    #print("LOGGING COMMS")
                     log_communication([ship.latitude, ship.longitude],target)
 
                     ack = response.json()
@@ -211,6 +213,10 @@ def ship_behavior():
         time.sleep(TIME_STEP)
 
 if __name__ == "__main__":
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)  # Suppress GET/POST logs
+
     parser = argparse.ArgumentParser(description="Run the ship server.")
     parser.add_argument("--port", type=int, help="Port for the ship server.")
     parser.add_argument("--ip", type=str, default="127.0.0.1",

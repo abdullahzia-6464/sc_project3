@@ -90,6 +90,7 @@ def log_communication():
     target = data.get("target")
     timestamp = time.time()
     active_communications.append({"source": source, "target": target, "timestamp": timestamp})
+    #print("Communication Logged.")
     return jsonify({"status": "logged"}), 200
 
 
@@ -98,4 +99,8 @@ def visualize():
     return send_from_directory('templates', 'index.html')
 
 if __name__ == '__main__':
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)  # Suppress GET/POST logs
+
     app.run(debug=True, host='0.0.0.0', port=33069)

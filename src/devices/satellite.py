@@ -103,8 +103,8 @@ def receive_message():
     if ground_control_distance <= COMMUNICATION_RANGE_KM:
         try:
             response = requests.post(f"http://{EARTH_DEVICE_IP}:{GROUND_CONTROL_PORT}/", json=data, proxies={"http": None, "https": None})
-            if response.status_code == 200:
-                log_communication([satellite.latitude, satellite.longitude], GROUND_CONTROL_COORDS)
+            log_communication([satellite.latitude, satellite.longitude], GROUND_CONTROL_COORDS)
+            print(f"Message sent to Ground Control by satellite {SATELLITE_IP}:{satellite.id}")
             return jsonify({"status": "Message forwarded to ground control", "response": response.json()})
         except Exception as e:
             return jsonify({"status": "Error forwarding to ground control", "error": str(e)}), 500
@@ -129,8 +129,8 @@ def receive_message():
     while closest_neighbor:
         try:
             response = requests.post(f"http://{SATELLITE_IP}:{closest_neighbor}/", json=data, proxies={"http": None, "https": None})
-
             if response.status_code == 200:
+                print(f"Message sent to next satellite {SATELLITE_IP}:{closest_neighbor}")
                 target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_neighbor}/get-position", proxies={"http": None, "https": None}).json()
                 target = [target_coords["latitude"], target_coords["longitude"]]
                 log_communication([satellite.latitude, satellite.longitude], target)
@@ -168,6 +168,10 @@ def log_communication(source, target):
         #print("Failed to log communication")
 
 if __name__ == "__main__":
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR) 
+
     parser = argparse.ArgumentParser(description="Run a satellite server.")
     parser.add_argument("--port", type=int, help="Port number for the satellite.")
     parser.add_argument("--ip", type=str, default="127.0.0.1",
