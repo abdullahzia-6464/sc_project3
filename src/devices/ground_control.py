@@ -1,3 +1,4 @@
+import argparse
 from cryptography.fernet import Fernet
 import json
 from flask import Flask, request, jsonify
@@ -75,9 +76,15 @@ def receive_data():
 
 
 if __name__ == "__main__":
+    # Argument parser for IP
+    parser = argparse.ArgumentParser(description="Run the ground control server.")
+    parser.add_argument("--ip", type=str, default="0.0.0.0",
+                        help="IP address to bind the ground control server (default: 0.0.0.0).")
+    args = parser.parse_args()
+
     # Load the symmetric key
-    with open("symmetric.key", "rb") as key_file:
+    with open("src/devices/symmetric.key", "rb") as key_file:
         key = key_file.read()
     cipher_suite = Fernet(key)
 
-    app.run(host="0.0.0.0", port=GROUND_CONTROL_PORT)  # Ground control listens on port 8000
+    app.run(host=args.ip, port=GROUND_CONTROL_PORT)  # Ground control listens on port 8000

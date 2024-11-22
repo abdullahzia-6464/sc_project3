@@ -1,3 +1,4 @@
+import argparse
 from cryptography.fernet import Fernet
 import json
 from flask import Flask, jsonify
@@ -105,8 +106,8 @@ class Ship:
         # if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
         headers = {
             "X-Group-ID": "10",
-            "X-Destination-IP" : EARTH_DEVICE_IP,
-            "X-Destination-Port" : GROUND_CONTROL_PORT
+            "X-Destination-IP" : str(EARTH_DEVICE_IP),
+            "X-Destination-Port" : str(GROUND_CONTROL_PORT)
         }
         if current_time - self.last_sent_time > TIME_STEP * 5:
             data = {
@@ -210,25 +211,30 @@ def ship_behavior():
         time.sleep(TIME_STEP)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python ship.py <port>")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Run the ship server.")
+    parser.add_argument("--port", type=int, help="Port for the ship server.")
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="IP address of the ground control (default: 127.0.0.1).")
+    args = parser.parse_args()
+
+    port = args.port
+    ship = Ship(port=port)
 
     global interoperable
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         interoperable = True
     else:
         interoperable = False
 
-    port = int(sys.argv[1])
+    port = args.port
     ship = Ship(port=port)
 
     # Load the symmetric key
-    with open("symmetric.key", "rb") as key_file:
+    with open("src/devices/symmetric.key", "rb") as key_file:
         key = key_file.read()
     cipher_suite = Fernet(key)
 
     from threading import Thread
     Thread(target=ship_behavior, daemon=True).start()
-    app.run(host="0.0.0.0", port=port)
+    app.run(host=args.ip, port=port)
 
