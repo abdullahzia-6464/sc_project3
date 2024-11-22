@@ -1,5 +1,5 @@
+import argparse
 from flask import Flask, request, jsonify
-import math
 import time
 from threading import Thread
 import requests
@@ -76,13 +76,13 @@ def haversine(lat1, lon1, lat2, lon2):
 @app.route("/", methods=["POST"])
 def receive_message():
     headers = request.headers
-    if headers['X-Group-ID'] == '8':
+    """if headers['X-Group-ID'] == '8':
         ip = headers['X-Destination-IP']
         port = headers['X-Destination-Port']
         data = request.data
         print(f"Forwarding message to {ip}:{port}")
         response = requests.post(f"http://{ip}:{port}/", data=data, verify=False,headers=headers,proxies={"http": None, "https": None})
-        return response.text, response.status_code
+        return response.text, response.status_code"""
 
     data = request.get_json()
     random_delay = random.uniform(0.1, 1.0)  # Simulate realistic delay
@@ -103,8 +103,8 @@ def receive_message():
     if ground_control_distance <= COMMUNICATION_RANGE_KM:
         try:
             response = requests.post(f"http://{EARTH_DEVICE_IP}:{GROUND_CONTROL_PORT}/", json=data, proxies={"http": None, "https": None})
-            if response.status_code == 200:
-                log_communication([satellite.latitude, satellite.longitude], GROUND_CONTROL_COORDS)
+            log_communication([satellite.latitude, satellite.longitude], GROUND_CONTROL_COORDS)
+            print(f"Message sent to Ground Control by satellite {SATELLITE_IP}:{satellite.id}")
             return jsonify({"status": "Message forwarded to ground control", "response": response.json()})
         except Exception as e:
             return jsonify({"status": "Error forwarding to ground control", "error": str(e)}), 500
@@ -129,8 +129,8 @@ def receive_message():
     while closest_neighbor:
         try:
             response = requests.post(f"http://{SATELLITE_IP}:{closest_neighbor}/", json=data, proxies={"http": None, "https": None})
-
             if response.status_code == 200:
+                print(f"Message sent to next satellite {SATELLITE_IP}:{closest_neighbor}")
                 target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_neighbor}/get-position", proxies={"http": None, "https": None}).json()
                 target = [target_coords["latitude"], target_coords["longitude"]]
                 log_communication([satellite.latitude, satellite.longitude], target)
@@ -168,15 +168,23 @@ def log_communication(source, target):
         #print("Failed to log communication")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python satellite.py <port>")
-        sys.exit(1)
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR) 
 
-    port = int(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Run a satellite server.")
+    parser.add_argument("--port", type=int, help="Port number for the satellite.")
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="IP address to bind the satellite (default: 127.0.0.1).")
+    args = parser.parse_args()
+
+    port = args.port
+    ip = args.ip
+
     satellite = Satellite(
         satellite_id=port,
         all_ports=SATELLITE_PORTS,
     )
 
     Thread(target=position_updater, daemon=True).start()
-    app.run(debug=True, host="0.0.0.0", port=port)
+    app.run(debug=True, host=ip, port=port)

@@ -5,12 +5,11 @@ import time
 import requests
 import os
 
-SHIP_PORT = 33001
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(BASE_DIR)
 #sys.path.append("/Users/korayyesilova/Desktop/sc_project3/src")  # Update to your project path
-from config import COMMUNICATION_RANGE_KM, GROUND_CONTROL_COORDS, SATELLITE_PORTS, GROUND_CONTROL_COORDS, EARTH_DEVICE_IP, SATELLITE_IP
+from config import COMMUNICATION_RANGE_KM, SHIP_PORT, SATELLITE_PORTS, GROUND_CONTROL_COORDS, EARTH_DEVICE_IP, SATELLITE_IP
 
 # Shared data to track active communications
 active_communications = []
@@ -65,7 +64,7 @@ def get_all_positions():
             positions["satellites"].append({"latitude": position[0], "longitude": position[1], "port": port})
 
     # Fetch ship position
-    ship_position = fetch_position(EARTH_DEVICE_IP, SHIP_PORT)
+    ship_position = fetch_position(EARTH_DEVICE_IP, SHIP_PORT[0])
     if ship_position:
         positions["ship"] = {"latitude": ship_position[0], "longitude": ship_position[1]}
 
@@ -91,6 +90,7 @@ def log_communication():
     target = data.get("target")
     timestamp = time.time()
     active_communications.append({"source": source, "target": target, "timestamp": timestamp})
+    #print("Communication Logged.")
     return jsonify({"status": "logged"}), 200
 
 
@@ -99,4 +99,8 @@ def visualize():
     return send_from_directory('templates', 'index.html')
 
 if __name__ == '__main__':
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)  # Suppress GET/POST logs
+
     app.run(debug=True, host='0.0.0.0', port=33069)

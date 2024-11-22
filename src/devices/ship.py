@@ -1,3 +1,6 @@
+import argparse
+from cryptography.fernet import Fernet
+import json
 from flask import Flask, jsonify
 import requests
 import random
@@ -103,8 +106,8 @@ class Ship:
         # if self.last_ack is not None or current_time - self.last_sent_time > TIME_STEP * 5:
         headers = {
             "X-Group-ID": "10",
-            "X-Destination-IP" : EARTH_DEVICE_IP,
-            "X-Destination-Port" : GROUND_CONTROL_PORT
+            "X-Destination-IP" : str(EARTH_DEVICE_IP),
+            "X-Destination-Port" : str(GROUND_CONTROL_PORT)
         }
         if current_time - self.last_sent_time > TIME_STEP * 5:
             data = {
@@ -119,15 +122,24 @@ class Ship:
                     "water_depth": round(random.uniform(50.0, 200.0), 1),
                 }
             }
-            
+
+            # Serialize and encrypt the payload
+            payload_str = json.dumps(data["payload"])
+            encrypted_payload = cipher_suite.encrypt(payload_str.encode())
+            data["payload"] = encrypted_payload.decode()
+
             # Calculate checksum
-            data["checksum"] = calculate_checksum(data["payload"])
+            data["checksum"] = calculate_checksum(payload_str)
 
             # Introduce random corruption
             if random.random() < 0.2:  # 20% probability
-                data["payload"]["caught_fish"] = "CORRUPTED"
-                print("Payload corrupted for demonstration")
-            
+                decrypted_payload = json.loads(cipher_suite.decrypt(data["payload"].encode()).decode())
+                decrypted_payload["caught_fish"] = "CORRUPTED"
+                print("*************")
+                print("Payload corrupted for demonstration. Ground control will discard this message after checking checksum.")
+                print("*************")
+                data["payload"] = cipher_suite.encrypt(json.dumps(decrypted_payload).encode()).decode()
+
             if interoperable:
                 try:
                     response = requests.post(f"http://{GROUP8_IP}:{33001}/", json=data, proxies={"http": None, "https": None}, headers=headers)
@@ -140,11 +152,11 @@ class Ship:
             if closest_satellite:
                 try:
                     response = requests.post(f"http://{SATELLITE_IP}:{closest_satellite}/", json=data, proxies={"http": None, "https": None}, headers=headers)
-
+                    print(f"Message sent to satellite {SATELLITE_IP}:{closest_satellite}")
                     # call log_communication to visualise the comm
                     target_coords = requests.get(f"http://{SATELLITE_IP}:{closest_satellite}/get-position", proxies={"http": None, "https": None}).json()
                     target = [target_coords["latitude"], target_coords["longitude"]]
-                    print("LOGGING COMMS")
+                    #print("LOGGING COMMS")
                     log_communication([ship.latitude, ship.longitude],target)
 
                     ack = response.json()
@@ -201,19 +213,34 @@ def ship_behavior():
         time.sleep(TIME_STEP)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python ship.py <port>")
-        sys.exit(1)
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)  # Suppress GET/POST logs
+
+    parser = argparse.ArgumentParser(description="Run the ship server.")
+    parser.add_argument("--port", type=int, help="Port for the ship server.")
+    parser.add_argument("--ip", type=str, default="127.0.0.1",
+                        help="IP address of the ground control (default: 127.0.0.1).")
+    args = parser.parse_args()
+
+    port = args.port
+    ship = Ship(port=port)
 
     global interoperable
-    if len(sys.argv) == 3:
+    if len(sys.argv) == 4:
         interoperable = True
     else:
         interoperable = False
 
-    port = int(sys.argv[1])
+    port = args.port
     ship = Ship(port=port)
+
+    # Load the symmetric key
+    with open("src/devices/symmetric.key", "rb") as key_file:
+        key = key_file.read()
+    cipher_suite = Fernet(key)
+
     from threading import Thread
     Thread(target=ship_behavior, daemon=True).start()
-    app.run(host="0.0.0.0", port=port)
+    app.run(host=args.ip, port=port)
 

@@ -1,3 +1,6 @@
+import argparse
+from cryptography.fernet import Fernet
+import json
 from flask import Flask, request, jsonify
 import csv
 from pathlib import Path
@@ -32,8 +35,17 @@ if not file_path.exists():
 def receive_data():
     data = request.get_json()
     if "payload" in data and "checksum" in data:
+        try:
+            # Decrypt the payload
+            encrypted_payload = data["payload"].encode()
+            decrypted_payload = cipher_suite.decrypt(encrypted_payload).decode()
+            data["payload"] = json.loads(decrypted_payload)
+        except Exception as e:
+            print(f"Decryption failed: {e}")
+            return jsonify({"status": "Decryption Error"}), 400
+
         received_checksum = data["checksum"]
-        calculated_checksum = calculate_checksum(data["payload"])
+        calculated_checksum = calculate_checksum(decrypted_payload)
 
         # Verify checksum
         if received_checksum != calculated_checksum:
@@ -64,4 +76,15 @@ def receive_data():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=GROUND_CONTROL_PORT)  # Ground control listens on port 8000
+    # Argument parser for IP
+    parser = argparse.ArgumentParser(description="Run the ground control server.")
+    parser.add_argument("--ip", type=str, default="0.0.0.0",
+                        help="IP address to bind the ground control server (default: 0.0.0.0).")
+    args = parser.parse_args()
+
+    # Load the symmetric key
+    with open("src/devices/symmetric.key", "rb") as key_file:
+        key = key_file.read()
+    cipher_suite = Fernet(key)
+
+    app.run(host=args.ip, port=GROUND_CONTROL_PORT)  # Ground control listens on port 8000
