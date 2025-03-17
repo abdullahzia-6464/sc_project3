@@ -1,5 +1,4 @@
-# Path for initial positions data
-INITIAL_POSITIONS_FILE = "data/initial_positions.csv"
+
 
 # Network configurations
 GROUP8_IP = '10.35.70.11'
@@ -15,7 +14,7 @@ NUM_SATELLITES = 6
 
 # Geographic parameters
 GROUND_CONTROL_COORDS = [51.8985, -8.4756]
-COMMUNICATION_RANGE_KM = 180
+COMMUNICATION_RANGE_KM = 140
 
 # Movement parameters
 SHIP_SPEED = 0.02

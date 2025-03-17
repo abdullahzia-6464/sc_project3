@@ -26,6 +26,21 @@ The system implements:
 - Resilience to node failures
 - Visualization of network state and message routing
 
+## Visualization
+
+The system includes a real-time visualization web interface that shows the positions and communications between ships, satellites, and ground control.
+
+![Satellite Communication Visualization](screenshots/image.png)
+
+In the visualization:
+- Red circles represent satellites
+- Blue marker in the sea represents the ship
+- Blue marker on land represents ground control
+- **Blue lines** show potential communication paths between entities within range of each other
+- **Green dashed lines** show active message transmissions happening in real-time
+
+This visualization allows you to observe the dynamic routing of messages as they travel from ships through the satellite network to ground control. When satellites move out of range or are disabled, you can watch the system adapt by finding new communication paths.
+
 ## Installation
 
 ### Prerequisites
